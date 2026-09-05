@@ -2,14 +2,388 @@
 <html>
 
 <head>
-    <title>Finish Videos</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Finish Videos</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:Arial;
+    background:#f5f5f5;
+}
+
+header{
+    background:#111;
+    color:white;
+    padding:20px;
+    text-align:center;
+}
+
+header h1{
+    margin:0;
+}
+
+.search{
+    padding:15px;
+    text-align:center;
+    background:white;
+}
+
+.search input{
+    width:90%;
+    max-width:500px;
+    padding:12px;
+    border:1px solid #ccc;
+    border-radius:10px;
+    font-size:16px;
+}
+
+.filters{
+    text-align:center;
+    padding:15px;
+}
+
+.filters button{
+    padding:10px 18px;
+    margin:5px;
+    border:none;
+    border-radius:20px;
+    cursor:pointer;
+    background:#ddd;
+}
+
+.filters button.active{
+    background:#111;
+    color:white;
+}
+
+#content{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:20px;
+    padding:20px;
+    max-width:1200px;
+    margin:auto;
+}
+
+.card{
+    background:white;
+    border-radius:15px;
+    overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,.15);
+}
+
+.card img{
+    width:100%;
+    display:block;
+}
+
+.card-info{
+    padding:15px;
+}
+
+.card-title{
+    font-size:20px;
+    font-weight:bold;
+    margin-bottom:8px;
+}
+
+.card-description{
+    color:#666;
+}
+
+.video-container{
+    position:relative;
+    padding-bottom:56.25%;
+    height:0;
+    overflow:hidden;
+}
+
+.video-container iframe{
+    position:absolute;
+    width:100%;
+    height:100%;
+    border:0;
+}
+
+.empty{
+    text-align:center;
+    padding:50px;
+    color:#777;
+}
+
+</style>
+
 </head>
 
 <body>
 
-    <h1>🎬 Finish Videos</h1>
+<header>
 
-    <p>Our video and image app is coming...</p>
+<h1>🎬 Finish Videos</h1>
+
+<p>Videos & Images</p>
+
+</header>
+
+
+<div class="search">
+
+<input
+    id="searchInput"
+    type="text"
+    placeholder="🔎 Search..."
+    oninput="displayContent()"
+>
+
+</div>
+
+
+<div class="filters">
+
+<button
+    class="active"
+    onclick="setFilter('all',this)"
+>
+All
+</button>
+
+<button
+    onclick="setFilter('video',this)"
+>
+🎬 Videos
+</button>
+
+<button
+    onclick="setFilter('image',this)"
+>
+🖼️ Images
+</button>
+
+</div>
+
+
+<div id="content">
+
+<div class="empty">
+
+Loading...
+
+</div>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+    getDatabase,
+    ref,
+    onValue
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+
+/* FIREBASE CONFIG */
+
+const firebaseConfig = {
+
+    apiKey: "AIzaSyB7y5ePaBA1uSOAWzIWw1OVXKGp3Bkfbfw",
+
+    authDomain: "finish-app-e69cd.firebaseapp.com",
+
+    databaseURL:
+    "https://finish-app-e69cd-default-rtdb.europe-west1.firebasedatabase.app",
+
+    projectId: "finish-app-e69cd",
+
+    storageBucket:
+    "finish-app-e69cd.firebasestorage.app",
+
+    messagingSenderId: "959903200634",
+
+    appId:
+    "1:959903200634:web:4ded7b54da72b08e3a52c3"
+
+};
+
+
+const app = initializeApp(firebaseConfig);
+
+const db = getDatabase(app);
+
+const contentRef = ref(db,"content");
+
+
+let allContent = [];
+
+let currentFilter = "all";
+
+
+/* READ CONTENT FROM FIREBASE */
+
+onValue(contentRef,(snapshot)=>{
+
+    const data = snapshot.val();
+
+    if(!data){
+
+        allContent = [];
+
+    }else{
+
+        allContent =
+        Object.entries(data).map(([id,item])=>({
+
+            id:id,
+            ...item
+
+        }));
+
+    }
+
+    displayContent();
+
+});
+
+
+/* FILTER */
+
+window.setFilter = function(filter,button){
+
+    currentFilter = filter;
+
+    document
+    .querySelectorAll(".filters button")
+    .forEach(btn=>btn.classList.remove("active"));
+
+    button.classList.add("active");
+
+    displayContent();
+
+};
+
+
+/* DISPLAY */
+
+window.displayContent = function(){
+
+    const container =
+    document.getElementById("content");
+
+    const search =
+    document
+    .getElementById("searchInput")
+    .value
+    .toLowerCase();
+
+
+    let items = allContent.filter(item=>{
+
+        const matchesFilter =
+        currentFilter === "all" ||
+        item.type === currentFilter;
+
+        const matchesSearch =
+        (item.title || "")
+        .toLowerCase()
+        .includes(search);
+
+        return matchesFilter && matchesSearch;
+
+    });
+
+
+    container.innerHTML = "";
+
+
+    if(items.length === 0){
+
+        container.innerHTML = `
+        <div class="empty">
+            No content yet.
+        </div>
+        `;
+
+        return;
+
+    }
+
+
+    items.reverse().forEach(item=>{
+
+        let media = "";
+
+
+        /* VIDEO */
+
+        if(item.type === "video"){
+
+            media = `
+
+            <div class="video-container">
+
+                <iframe
+                    src="https://www.youtube.com/embed/${item.youtubeId}"
+                    allowfullscreen>
+                </iframe>
+
+            </div>
+
+            `;
+
+        }
+
+
+        /* IMAGE */
+
+        if(item.type === "image"){
+
+            media = `
+
+            <img
+                src="${item.imageUrl}"
+                alt="${item.title || ""}"
+            >
+
+            `;
+
+        }
+
+
+        container.innerHTML += `
+
+        <div class="card">
+
+            ${media}
+
+            <div class="card-info">
+
+                <div class="card-title">
+                    ${item.title || ""}
+                </div>
+
+                <div class="card-description">
+                    ${item.description || ""}
+                </div>
+
+            </div>
+
+        </div>
+
+        `;
+
+    });
+
+};
+
+</script>
 
 </body>
 
